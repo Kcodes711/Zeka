@@ -1,77 +1,119 @@
-import React, { useState } from 'react';
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
-  View,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { useRouter } from 'expo-router';
+  View,
+} from "react-native";
+
+import {
+  addPostedTask,
+  getPostedTask,
+  updatePostedTask,
+  usePostedTasks,
+} from "@/lib/task-store";
 
 // Once constants/colors.ts is set up, replace this with:
 // import { COLORS } from '@/constants/colors';
 const COLORS = {
-  primary: '#0066EF',
-  accent: '#FF9F01',
-  text: '#0A1D3F',
-  muted: '#8A93A6',
-  border: '#E2E6ED',
-  background: '#FFFFFF',
-  cardBg: '#F7F9FC',
-  error: '#E5484D',
+  primary: "#0066EF",
+  accent: "#FF9F01",
+  text: "#0A1D3F",
+  muted: "#8A93A6",
+  border: "#E2E6ED",
+  background: "#FFFFFF",
+  cardBg: "#F7F9FC",
+  error: "#E5484D",
 };
 
 export default function CreateTaskScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ taskId?: string }>();
+  const taskId = typeof params.taskId === "string" ? params.taskId : undefined;
+  const postedTasks = usePostedTasks();
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [location, setLocation] = useState('');
-  const [suggestedBudget, setSuggestedBudget] = useState('');
-  const [deadline, setDeadline] = useState('');
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [location, setLocation] = useState("");
+  const [suggestedBudget, setSuggestedBudget] = useState("");
+  const [deadline, setDeadline] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const handlePost = () => {
+  useEffect(() => {
+    if (!taskId) return;
+
+    const task = postedTasks.find((postedTask) => postedTask.id === taskId);
+    if (task) {
+      setTitle(task.title);
+      setDescription(task.description);
+      setLocation(task.location);
+      setSuggestedBudget(String(task.budget || ""));
+      setDeadline(task.deadline);
+    }
+  }, [postedTasks, taskId]);
+
+  const handlePost = async () => {
     setError(null);
 
     if (!title.trim()) {
-      setError('Give your task a title');
+      setError("Give your task a title");
       return;
     }
     if (!location.trim()) {
-      setError('Add a location');
+      setError("Add a location");
       return;
     }
-    if (suggestedBudget && isNaN(Number(suggestedBudget))) {
-      setError('Budget must be a number');
+    if (suggestedBudget && !Number.isFinite(Number(suggestedBudget))) {
+      setError("Budget must be a number");
       return;
     }
 
     setSubmitting(true);
-    // TODO: replace with real request to create a Task in your backend
-    setTimeout(() => {
+    try {
+      const taskDetails = {
+        title: title.trim(),
+        description: description.trim(),
+        location: location.trim(),
+        budget: Number(suggestedBudget) || 0,
+        deadline: deadline.trim(),
+      };
+      if (taskId) {
+        if (!getPostedTask(taskId)) {
+          setError("This task is no longer available to edit");
+          setSubmitting(false);
+          return;
+        }
+        await updatePostedTask(taskId, taskDetails);
+      } else {
+        await addPostedTask(taskDetails);
+      }
+      router.replace("/poster-home");
+    } catch {
+      setError("We couldn't save your task. Please try again.");
       setSubmitting(false);
-      // TODO: navigate to the new task's details or back to Home
-      // router.replace('/');
-    }, 600);
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.headerTitle}>Post a task</Text>
+          <Text style={styles.headerTitle}>
+            {taskId ? "Edit task" : "Post a task"}
+          </Text>
           <Text style={styles.headerSubtitle}>
             Describe what you need done — workers will send offers
           </Text>
@@ -116,7 +158,7 @@ export default function CreateTaskScreen() {
             <View style={[styles.field, styles.halfField]}>
               <Text style={styles.label}>Suggested budget</Text>
               <View style={styles.budgetInputWrapper}>
-                <Text style={styles.dollarSign}>$</Text>
+                <Text style={styles.dollarSign}>K</Text>
                 <TextInput
                   style={styles.budgetInput}
                   placeholder="0"
@@ -126,7 +168,9 @@ export default function CreateTaskScreen() {
                   keyboardType="numeric"
                 />
               </View>
-              <Text style={styles.hint}>Workers can offer a different price</Text>
+              <Text style={styles.hint}>
+                Workers can offer a different price
+              </Text>
             </View>
 
             <View style={[styles.field, styles.halfField]}>
@@ -149,7 +193,13 @@ export default function CreateTaskScreen() {
             disabled={submitting}
           >
             <Text style={styles.buttonText}>
-              {submitting ? 'Posting...' : 'Post task'}
+              {submitting
+                ? taskId
+                  ? "Saving..."
+                  : "Posting..."
+                : taskId
+                  ? "Save changes"
+                  : "Post task"}
             </Text>
           </TouchableOpacity>
 
@@ -172,7 +222,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: "700",
     color: COLORS.text,
     marginBottom: 4,
   },
@@ -184,12 +234,12 @@ const styles = StyleSheet.create({
   field: { marginBottom: 18 },
   halfField: { flex: 1 },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   label: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.text,
     marginBottom: 6,
   },
@@ -208,8 +258,8 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   budgetInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 10,
@@ -241,17 +291,17 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderRadius: 10,
     paddingVertical: 15,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 8,
   },
   buttonDisabled: { opacity: 0.6 },
   buttonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   cancelText: {
-    textAlign: 'center',
+    textAlign: "center",
     color: COLORS.muted,
     fontSize: 14,
     marginTop: 16,

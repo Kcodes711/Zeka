@@ -1,62 +1,62 @@
-import React, { useState, useRef } from 'react';
+import { useRouter } from "expo-router";
+import { useRef, useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-} from 'react-native';
-import { useRouter } from 'expo-router';
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
 
 // Colors — swap these out once you've finalized your brand palette,
 // or wire this up to your existing @/constants/theme file instead.
 const COLORS = {
-  primary: '#0069F4',
-  primaryDark: '#0058D3',
-  text: '#0C1D40',
-  muted: '#8A93A6',
-  border: '#E2E6ED',
-  background: '#FFFFFF',
-  error: '#E5484D',
+  primary: "#0069F4",
+  primaryDark: "#0058D3",
+  text: "#0C1D40",
+  muted: "#8A93A6",
+  border: "#E2E6ED",
+  background: "#FFFFFF",
+  error: "#E5484D",
 };
 
-type Step = 'phone' | 'otp';
+type Step = "phone" | "otp";
 const OTP_LENGTH = 6;
 
 export default function LoginScreen() {
   const router = useRouter();
 
-  const [step, setStep] = useState<Step>('phone');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
+  const [step, setStep] = useState<Step>("phone");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const otpInputs = useRef<Array<TextInput | null>>([]);
 
-  const isValidPhone = (value: string) => value.replace(/\D/g, '').length >= 10;
+  const isValidPhone = (value: string) => value.replace(/\D/g, "").length >= 10;
 
   const handleSendCode = () => {
     setError(null);
     if (!isValidPhone(phoneNumber)) {
-      setError('Enter a valid phone number');
+      setError("Enter a valid phone number");
       return;
     }
     setLoading(true);
     // TODO: replace with real request to your auth backend (e.g. Supabase OTP send)
     setTimeout(() => {
       setLoading(false);
-      setStep('otp');
+      setStep("otp");
     }, 600);
   };
 
   const handleOtpChange = (value: string, index: number) => {
     if (value.length > 1) return; // ignore paste-multiple for now
     const next = [...otp];
-    next[index] = value.replace(/\D/g, '');
+    next[index] = value.replace(/\D/g, "");
     setOtp(next);
 
     if (value && index < OTP_LENGTH - 1) {
@@ -65,29 +65,28 @@ export default function LoginScreen() {
   };
 
   const handleOtpKeyPress = (key: string, index: number) => {
-    if (key === 'Backspace' && !otp[index] && index > 0) {
+    if (key === "Backspace" && !otp[index] && index > 0) {
       otpInputs.current[index - 1]?.focus();
     }
   };
 
   const handleVerify = () => {
     setError(null);
-    const code = otp.join('');
+    const code = otp.join("");
     if (code.length !== OTP_LENGTH) {
-      setError('Enter the full code');
+      setError("Enter the full code");
       return;
     }
     setLoading(true);
     // TODO: replace with real verification call to your auth backend
     setTimeout(() => {
       setLoading(false);
-      // TODO: once the Home Feed route exists, navigate there instead:
-      // router.replace('/home');
+      router.replace("/");
     }, 600);
   };
 
   const handleResend = () => {
-    setOtp(Array(OTP_LENGTH).fill(''));
+    setOtp(Array(OTP_LENGTH).fill(""));
     setError(null);
     // TODO: trigger real resend request
   };
@@ -96,19 +95,19 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View style={styles.container}>
           <Text style={styles.title}>
-            {step === 'phone' ? 'Welcome to Zeka' : 'Enter the code'}
+            {step === "phone" ? "Welcome to Zeka" : "Enter the code"}
           </Text>
           <Text style={styles.subtitle}>
-            {step === 'phone'
+            {step === "phone"
               ? "We'll text you a verification code"
               : `Sent to ${phoneNumber}`}
           </Text>
 
-          {step === 'phone' ? (
+          {step === "phone" ? (
             <>
               <View style={styles.inputWrapper}>
                 <Text style={styles.inputLabel}>Phone number</Text>
@@ -131,7 +130,7 @@ export default function LoginScreen() {
                 disabled={loading}
               >
                 <Text style={styles.buttonText}>
-                  {loading ? 'Sending...' : 'Send code'}
+                  {loading ? "Sending..." : "Send code"}
                 </Text>
               </TouchableOpacity>
             </>
@@ -162,7 +161,7 @@ export default function LoginScreen() {
                 disabled={loading}
               >
                 <Text style={styles.buttonText}>
-                  {loading ? 'Verifying...' : 'Verify & continue'}
+                  {loading ? "Verifying..." : "Verify & continue"}
                 </Text>
               </TouchableOpacity>
 
@@ -173,7 +172,7 @@ export default function LoginScreen() {
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity onPress={() => setStep('phone')}>
+              <TouchableOpacity onPress={() => setStep("phone")}>
                 <Text style={[styles.mutedText, styles.editNumber]}>
                   Edit phone number
                 </Text>
@@ -191,12 +190,12 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: 24,
   },
   title: {
     fontSize: 26,
-    fontWeight: '700',
+    fontWeight: "700",
     color: COLORS.text,
     marginBottom: 8,
   },
@@ -221,8 +220,8 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   otpRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 20,
   },
   otpBox: {
@@ -231,7 +230,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 10,
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 20,
     color: COLORS.text,
   },
@@ -239,14 +238,14 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderRadius: 10,
     paddingVertical: 15,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 4,
   },
   buttonDisabled: { opacity: 0.6 },
   buttonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   errorText: {
     color: COLORS.error,
@@ -254,15 +253,15 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   resendRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
     marginTop: 20,
   },
   mutedText: { color: COLORS.muted, fontSize: 14 },
   resendLink: {
     color: COLORS.primary,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
-  editNumber: { textAlign: 'center', marginTop: 14 },
+  editNumber: { textAlign: "center", marginTop: 14 },
 });
