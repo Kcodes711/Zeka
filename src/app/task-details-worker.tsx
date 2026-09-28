@@ -5,13 +5,14 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
 
 import { formatK } from "@/lib/format";
 import {
-    claimPostedTask,
+    addBidToTask,
     usePostedTasks,
     useTasksHydrated,
 } from "@/lib/task-store";
@@ -39,17 +40,32 @@ export default function TaskDetailsWorker() {
   const task = tasks.find((item) => item.id === taskId);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [bidAmount, setBidAmount] = useState("");
+  const [bidMessage, setBidMessage] = useState("");
 
-  const handleTakeTask = async () => {
+  const handlePlaceBid = async () => {
     if (!task || task.status !== "Open") return;
+
+    const amount = Number(bidAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError("Enter a valid offer amount");
+      return;
+    }
 
     setError(null);
     setSubmitting(true);
     try {
-      await claimPostedTask(task.id);
-      router.replace("/active-jobs-worker");
+      await addBidToTask(task.id, {
+        workerId: `worker-demo-${task.id}`,
+        workerName: "You",
+        amount,
+        message: bidMessage.trim(),
+      });
+      setBidAmount("");
+      setBidMessage("");
+      router.replace("/worker-home");
     } catch {
-      setError("We couldn't take this task. Please try again.");
+      setError("We couldn't send this bid. Please try again.");
       setSubmitting(false);
     }
   };
@@ -66,10 +82,7 @@ export default function TaskDetailsWorker() {
               ? "This task may have been removed or taken by someone else."
               : "Getting the latest task details."}
           </Text>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => router.replace("/worker-home")}
-          >
+          <TouchableOpacity style={styles.button} onPress={() => router.back()}>
             <Text style={styles.buttonText}>Back to available tasks</Text>
           </TouchableOpacity>
         </View>
@@ -80,15 +93,15 @@ export default function TaskDetailsWorker() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <TouchableOpacity
-          onPress={() => router.replace("/worker-home")}
-          style={styles.backLink}
-        >
+        <TouchableOpacity onPress={() => router.back()} style={styles.backLink}>
           <Text style={styles.backLinkText}>Back to available tasks</Text>
         </TouchableOpacity>
 
         <Text style={styles.title}>{task.title}</Text>
         <View style={styles.metaRow}>
+          <Text style={styles.categoryPill}>
+            {task.category || "Small errands"}
+          </Text>
           <Text style={styles.metaText}>{task.location}</Text>
           {task.deadline ? (
             <>
@@ -114,15 +127,34 @@ export default function TaskDetailsWorker() {
 
         {error && <Text style={styles.errorText}>{error}</Text>}
         {task.status === "Open" ? (
-          <TouchableOpacity
-            style={[styles.button, submitting && styles.buttonDisabled]}
-            onPress={handleTakeTask}
-            disabled={submitting}
-          >
-            <Text style={styles.buttonText}>
-              {submitting ? "Taking task..." : "Take this task"}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.bidCard}>
+            <Text style={styles.sectionLabel}>Place a bid</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Your offer amount"
+              keyboardType="numeric"
+              value={bidAmount}
+              onChangeText={setBidAmount}
+            />
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Add a short message for the poster"
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              value={bidMessage}
+              onChangeText={setBidMessage}
+            />
+            <TouchableOpacity
+              style={[styles.button, submitting && styles.buttonDisabled]}
+              onPress={handlePlaceBid}
+              disabled={submitting}
+            >
+              <Text style={styles.buttonText}>
+                {submitting ? "Sending bid..." : "Send bid"}
+              </Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           <View style={styles.statusNotice}>
             <Text style={styles.statusNoticeText}>
@@ -131,7 +163,7 @@ export default function TaskDetailsWorker() {
                 : "This task is already in progress."}
             </Text>
             <TouchableOpacity
-              onPress={() => router.replace("/active-jobs-worker")}
+              onPress={() => router.push("/active-jobs-worker")}
             >
               <Text style={styles.backLinkText}>Open My Jobs</Text>
             </TouchableOpacity>
@@ -166,6 +198,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  categoryPill: {
+    backgroundColor: "#EAF3FF",
+    color: COLORS.primary,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    fontSize: 10,
+    fontWeight: "700",
+    overflow: "hidden",
   },
   metaText: {
     fontSize: 13,
@@ -211,6 +255,27 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     lineHeight: 22,
   },
+  bidCard: {
+    backgroundColor: COLORS.cardBg,
+    borderRadius: 14,
+    padding: 16,
+    marginTop: 12,
+  },
+  input: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: COLORS.text,
+    marginBottom: 12,
+  },
+  textArea: {
+    minHeight: 100,
+    textAlignVertical: "top",
+  },
   posterCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -255,20 +320,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: COLORS.text,
     marginBottom: 6,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: COLORS.text,
-    backgroundColor: COLORS.cardBg,
-  },
-  textArea: {
-    minHeight: 80,
-    paddingTop: 12,
   },
   budgetInputWrapper: {
     flexDirection: "row",

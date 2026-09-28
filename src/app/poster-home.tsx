@@ -77,7 +77,12 @@ export default function PosterHomeScreen() {
         </View>
       </View>
 
-      <Text style={styles.metaText}>{item.location}</Text>
+      <View style={styles.taskMetaRow}>
+        <Text style={styles.taskCategory}>
+          {item.category || "Small errands"}
+        </Text>
+        <Text style={styles.metaText}>{item.location}</Text>
+      </View>
 
       <View style={styles.taskFooter}>
         <Text style={styles.offerText}>
@@ -484,6 +489,22 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 8 },
     elevation: 3,
+  },
+  taskMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+    flexWrap: "wrap",
+  },
+  taskCategory: {
+    backgroundColor: "#EAF3FF",
+    color: COLORS.primary,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    fontSize: 10,
+    fontWeight: "700",
   },
   taskHeader: {
     flexDirection: "row",

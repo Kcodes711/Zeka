@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useState } from "react";
 import {
     SafeAreaView,
     ScrollView,
@@ -9,7 +10,11 @@ import {
 } from "react-native";
 
 import { formatK } from "@/lib/format";
-import { usePostedTasks, useTasksHydrated } from "@/lib/task-store";
+import {
+    acceptBidForTask,
+    usePostedTasks,
+    useTasksHydrated,
+} from "@/lib/task-store";
 
 // Once constants/colors.ts is set up, replace this with:
 // import { COLORS } from '@/constants/colors';
@@ -31,6 +36,18 @@ export default function TaskDetailsClient() {
   const tasks = usePostedTasks();
   const tasksHydrated = useTasksHydrated();
   const task = tasks.find((item) => item.id === taskId);
+  const [processingBidId, setProcessingBidId] = useState<string | null>(null);
+
+  const handleAcceptBid = async (bidId: string) => {
+    if (!task) return;
+
+    setProcessingBidId(bidId);
+    try {
+      await acceptBidForTask(task.id, bidId);
+    } finally {
+      setProcessingBidId(null);
+    }
+  };
 
   if (!task) {
     return (
@@ -44,10 +61,7 @@ export default function TaskDetailsClient() {
               ? "This task may have been deleted."
               : "Getting the latest task details."}
           </Text>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => router.replace("/poster-home")}
-          >
+          <TouchableOpacity style={styles.button} onPress={() => router.back()}>
             <Text style={styles.buttonText}>Back to My Tasks</Text>
           </TouchableOpacity>
         </View>
@@ -55,21 +69,24 @@ export default function TaskDetailsClient() {
     );
   }
 
+  const bids = task.bids ?? [];
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.content}>
-        <TouchableOpacity
-          onPress={() => router.replace("/poster-home")}
-          style={styles.backLink}
-        >
+        <TouchableOpacity onPress={() => router.back()} style={styles.backLink}>
           <Text style={styles.backLinkText}>Back to My Tasks</Text>
         </TouchableOpacity>
 
         <View style={styles.header}>
           <Text style={styles.title}>{task.title}</Text>
-          <Text style={styles.subtitle}>
-            {task.location} · Budget {formatK(task.budget)}
-          </Text>
+          <View style={styles.metaRow}>
+            <Text style={styles.categoryPill}>
+              {task.category || "Small errands"}
+            </Text>
+            <Text style={styles.subtitle}>{task.location}</Text>
+          </View>
+          <Text style={styles.subtitle}>Budget {formatK(task.budget)}</Text>
         </View>
 
         <View style={styles.taskSummary}>
@@ -80,15 +97,60 @@ export default function TaskDetailsClient() {
         </View>
 
         <Text style={styles.offersCount}>
-          {task.offerCount} {task.offerCount === 1 ? "offer" : "offers"}
+          {bids.length} {bids.length === 1 ? "offer" : "offers"}
         </Text>
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>
-            {task.offerCount === 0
-              ? "No offers yet. This task is visible to workers."
-              : "Worker offer details will appear here when offer support is connected."}
-          </Text>
-        </View>
+
+        {bids.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>
+              No offers yet. This task is visible to workers.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.offerList}>
+            {bids.map((bid) => (
+              <View key={bid.id} style={styles.offerCard}>
+                <View style={styles.offerHeader}>
+                  <View style={styles.workerAvatar}>
+                    <Text style={styles.workerInitial}>
+                      {bid.workerName?.charAt(0)?.toUpperCase() ?? "W"}
+                    </Text>
+                  </View>
+                  <View style={styles.workerInfo}>
+                    <Text style={styles.workerName}>{bid.workerName}</Text>
+                    <Text style={styles.workerMeta}>Offer received</Text>
+                  </View>
+                  <Text style={styles.bidAmount}>{formatK(bid.amount)}</Text>
+                </View>
+
+                <Text style={styles.offerMessage}>
+                  {bid.message || "No message provided."}
+                </Text>
+
+                {bid.status === "Accepted" || task.acceptedBidId === bid.id ? (
+                  <View style={styles.acceptedBadge}>
+                    <Text style={styles.acceptedBadgeText}>Accepted</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[
+                      styles.acceptButton,
+                      processingBidId === bid.id && styles.acceptButtonDisabled,
+                    ]}
+                    onPress={() => handleAcceptBid(bid.id)}
+                    disabled={processingBidId === bid.id}
+                  >
+                    <Text style={styles.acceptButtonText}>
+                      {processingBidId === bid.id
+                        ? "Accepting..."
+                        : "Accept offer"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
+          </View>
+        )}
 
         <TouchableOpacity
           style={styles.button}
@@ -121,6 +183,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 8,
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 6,
+    flexWrap: "wrap",
+  },
+  categoryPill: {
+    backgroundColor: "#EAF3FF",
+    color: COLORS.primary,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    fontSize: 10,
+    fontWeight: "700",
+    overflow: "hidden",
   },
   title: {
     fontSize: 22,
@@ -161,6 +240,11 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 20,
     paddingBottom: 40,
+  },
+  offerList: {
+    paddingHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 20,
   },
   offerCard: {
     backgroundColor: COLORS.cardBg,
@@ -215,10 +299,25 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: "center",
   },
+  acceptButtonDisabled: {
+    opacity: 0.6,
+  },
   acceptButtonText: {
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "600",
+  },
+  acceptedBadge: {
+    backgroundColor: "#E7FFF4",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+  acceptedBadgeText: {
+    color: COLORS.success,
+    fontSize: 12,
+    fontWeight: "700",
   },
   emptyState: {
     alignItems: "center",

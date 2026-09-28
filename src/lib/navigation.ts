@@ -1,4 +1,8 @@
-import type { Href, Router } from "expo-router";
+import type { Href } from "expo-router";
+
+type RouterLike = {
+  replace: (href: Href) => void;
+};
 
 export type UserRole = "picker" | "poster";
 
@@ -7,11 +11,11 @@ export const ROLE_PATHS: Record<UserRole, Href> = {
   poster: "/poster-home",
 };
 
-export function navigateToRole(router: Router, role: UserRole) {
+export function navigateToRole(router: RouterLike, role: UserRole) {
   const target = ROLE_PATHS[role];
   router.replace(target);
 }
 
-export function goHome(router: Router) {
+export function goHome(router: RouterLike) {
   router.replace("/");
 }

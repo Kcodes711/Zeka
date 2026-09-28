@@ -1,22 +1,23 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 import {
-  addPostedTask,
-  getPostedTask,
-  updatePostedTask,
-  usePostedTasks,
+    addPostedTask,
+    getPostedTask,
+    TASK_CATEGORIES,
+    updatePostedTask,
+    usePostedTasks,
 } from "@/lib/task-store";
 
 // Once constants/colors.ts is set up, replace this with:
@@ -38,6 +39,8 @@ export default function CreateTaskScreen() {
   const taskId = typeof params.taskId === "string" ? params.taskId : undefined;
   const postedTasks = usePostedTasks();
 
+  const [category, setCategory] =
+    useState<(typeof TASK_CATEGORIES)[number]>("Small errands");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
@@ -51,6 +54,7 @@ export default function CreateTaskScreen() {
 
     const task = postedTasks.find((postedTask) => postedTask.id === taskId);
     if (task) {
+      setCategory(task.category || "Small errands");
       setTitle(task.title);
       setDescription(task.description);
       setLocation(task.location);
@@ -66,6 +70,10 @@ export default function CreateTaskScreen() {
       setError("Give your task a title");
       return;
     }
+    if (!category.trim()) {
+      setError("Select a task category");
+      return;
+    }
     if (!location.trim()) {
       setError("Add a location");
       return;
@@ -78,6 +86,7 @@ export default function CreateTaskScreen() {
     setSubmitting(true);
     try {
       const taskDetails = {
+        category,
         title: title.trim(),
         description: description.trim(),
         location: location.trim(),
@@ -117,6 +126,31 @@ export default function CreateTaskScreen() {
           <Text style={styles.headerSubtitle}>
             Describe what you need done — workers will send offers
           </Text>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>Category</Text>
+            <View style={styles.categoryGrid}>
+              {TASK_CATEGORIES.map((item) => (
+                <TouchableOpacity
+                  key={item}
+                  style={[
+                    styles.categoryChip,
+                    category === item && styles.categoryChipSelected,
+                  ]}
+                  onPress={() => setCategory(item)}
+                >
+                  <Text
+                    style={[
+                      styles.categoryChipText,
+                      category === item && styles.categoryChipTextSelected,
+                    ]}
+                  >
+                    {item}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
 
           <View style={styles.field}>
             <Text style={styles.label}>Title</Text>
@@ -233,6 +267,31 @@ const styles = StyleSheet.create({
   },
   field: { marginBottom: 18 },
   halfField: { flex: 1 },
+  categoryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  categoryChip: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: COLORS.cardBg,
+  },
+  categoryChipSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: "#EAF3FF",
+  },
+  categoryChipText: {
+    fontSize: 12,
+    color: COLORS.text,
+    fontWeight: "600",
+  },
+  categoryChipTextSelected: {
+    color: COLORS.primary,
+  },
   row: {
     flexDirection: "row",
     gap: 12,

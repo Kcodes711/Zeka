@@ -12,7 +12,11 @@ import {
 
 import { formatK } from "@/lib/format";
 import { goHome } from "@/lib/navigation";
-import { usePostedTasks, useTasksHydrated } from "@/lib/task-store";
+import {
+    TASK_CATEGORIES,
+    usePostedTasks,
+    useTasksHydrated,
+} from "@/lib/task-store";
 
 const COLORS = {
   primary: "#0069F4",
@@ -33,8 +37,10 @@ const COLORS = {
 export default function WorkerHomeScreen() {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const postedTasks = usePostedTasks();
   const tasksHydrated = useTasksHydrated();
+  const categoryOptions = ["All", ...TASK_CATEGORIES];
   const availableTasks = [
     ...postedTasks
       .filter((task) => task.status === "Open")
@@ -51,10 +57,12 @@ export default function WorkerHomeScreen() {
 
   const filteredTasks = useMemo(
     () =>
-      availableTasks.filter((task) =>
-        task.title.toLowerCase().includes(search.toLowerCase()),
+      availableTasks.filter(
+        (task) =>
+          (selectedCategory === "All" || task.category === selectedCategory) &&
+          task.title.toLowerCase().includes(search.toLowerCase()),
       ),
-    [availableTasks, search],
+    [availableTasks, search, selectedCategory],
   );
 
   const renderTask = ({ item }: { item: (typeof availableTasks)[number] }) => (
@@ -76,6 +84,9 @@ export default function WorkerHomeScreen() {
       </View>
 
       <View style={styles.rowMeta}>
+        <Text style={styles.categoryPill}>
+          {item.category || "Small errands"}
+        </Text>
         <Text style={styles.metaText}>{item.location}</Text>
         <View style={styles.dot} />
         <Text style={styles.metaText}>
@@ -155,6 +166,28 @@ export default function WorkerHomeScreen() {
             placeholder="Search for a task"
             placeholderTextColor={COLORS.muted}
           />
+        </View>
+
+        <View style={styles.filterRow}>
+          {categoryOptions.map((category) => (
+            <TouchableOpacity
+              key={category}
+              style={[
+                styles.filterChip,
+                selectedCategory === category && styles.filterChipActive,
+              ]}
+              onPress={() => setSelectedCategory(category)}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  selectedCategory === category && styles.filterChipTextActive,
+                ]}
+              >
+                {category}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <View style={styles.sectionHeader}>
@@ -318,7 +351,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   searchWrap: {
-    marginBottom: 18,
+    marginBottom: 12,
   },
   searchInput: {
     backgroundColor: COLORS.card,
@@ -329,6 +362,32 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
     color: COLORS.text,
+  },
+  filterRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 14,
+  },
+  filterChip: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  filterChipActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterChipText: {
+    color: COLORS.text,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  filterChipTextActive: {
+    color: "#FFFFFF",
   },
   sectionHeader: {
     flexDirection: "row",
@@ -383,6 +442,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 12,
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  categoryPill: {
+    backgroundColor: "#EAF3FF",
+    color: COLORS.primary,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    fontSize: 10,
+    fontWeight: "700",
+    overflow: "hidden",
   },
   metaText: {
     color: COLORS.muted,

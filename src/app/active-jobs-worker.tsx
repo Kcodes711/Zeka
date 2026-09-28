@@ -118,8 +118,8 @@ export default function ActiveJobsWorker() {
           <Text style={styles.headerTitle}>My jobs</Text>
           <Text style={styles.headerSubtitle}>Work you have picked up</Text>
         </View>
-        <TouchableOpacity onPress={() => router.replace("/worker-home")}>
-          <Text style={styles.browseLink}>Browse tasks</Text>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text style={styles.browseLink}>Back to worker home</Text>
         </TouchableOpacity>
       </View>
 
@@ -162,7 +162,7 @@ export default function ActiveJobsWorker() {
             {jobsHydrated && activeTab === "Active" && (
               <TouchableOpacity
                 style={styles.browseButton}
-                onPress={() => router.replace("/worker-home")}
+                onPress={() => router.back()}
               >
                 <Text style={styles.browseButtonText}>Browse tasks</Text>
               </TouchableOpacity>
